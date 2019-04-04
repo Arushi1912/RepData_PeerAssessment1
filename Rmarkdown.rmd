@@ -1,0 +1,138 @@
+---
+title: "Course Project 1 - Reproducible Research"
+author: "Arushi Nigam"
+---
+  
+###Assignment Instructions
+1.Code for reading in the dataset and/or processing the data
+2.Histogram of the total number of steps taken each day
+3.Mean and median number of steps taken each day
+4.Time series plot of the average number of steps taken
+5.The 5-minute interval that, on average, contains the maximum number of steps
+6.Code to describe and show a strategy for imputing missing data
+7.Histogram of the total number of steps taken each day after missing values are imputed
+8.Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+9.All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+
+##Step 1
+##Code for reading in the dataset and/or processing the data
+```{r, echo = TRUE}
+activity<-read.csv("activity.csv")
+```
+
+
+##Step 2
+##Histogram of the total number of steps taken each day
+```{r, echo = TRUE}
+library(dplyr)
+library(ggplot2)
+png("plot1.png", width = 480, height = 480)
+activityData <- read.csv("activity.csv")
+relData <- activityData %>% group_by(date) %>% summarize_all(sum, na.rm = TRUE)
+hist(relData$steps, xlab = "Total number of steps per day")
+dev.off()
+
+```
+
+
+##Step 3
+##Mean and median number of steps taken each day
+
+```{r, echo = TRUE}
+averageSteps<- mean(relData$steps)
+medianSteps <- median(relData$steps)
+print(averageSteps)
+print(medianSteps)
+```
+
+##Step 4
+##Time series plot of the average number of steps taken
+```{r, echo = TRUE}
+png("plot2.png", width = 480, height = 480)
+library(dplyr)
+library(ggplot2)
+activityData <- read.csv("activity.csv")
+relData <- activityData %>% group_by(interval) %>% summarize_at(vars(steps), mean, na.rm = TRUE)
+g <- ggplot(data = relData, aes(interval, steps)) + geom_line()
+g
+dev.off()
+```
+
+
+##Step 5
+##The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r, echo = TRUE}
+interval <- relData$interval[which.max(relData$steps)]
+print(interval)
+```
+
+
+##Step 6
+Code to describe and show a strategy for imputing missing data
+There are multiple strategies to deal with multiple value imputations.
+I will be using the mean of 5 minute intervals as a substitute for the respective NA values.
+I'm also displaying the respective mean and median values.
+```{r, echo = TRUE}
+png("plot3.png", width = 480, height = 480)
+library(dplyr)
+library(ggplot2)
+library(zoo)
+activityData <- read.csv("activity.csv")
+missingValues <- sum(is.na(activityData$steps))
+print(missingValues)
+activityData$steps <- na.aggregate(activityData$steps, activityData$interval)
+relData <- activityData %>% group_by(date) %>% summarize_all(sum, na.rm = TRUE)
+hist(relData$steps, xlab = "Total number of steps per day")
+dev.off()
+averageSteps <- mean(relData$steps)
+medianSteps <- median(relData$steps)
+print(averageSteps)
+print(medianSteps)
+Q6.6 <- activityData
+
+
+```
+
+By this point, from the plot, that the missing values have a very disctinct pattern. For every interval, there are consistantly 8 missing values. For the date, there are consistantly 288 missing values. And in total, there are 8 dates that have missing value. 
+In total, there are 2304 missing values as shown.
+
+## Step 7
+Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r, echo = TRUE}
+png("plot4.png")
+qplot(Q6.6$steps,geom="histogram",main="Total steps taken histogram post imputation",xlab="Steps",ylab="Count")
+dev.off()
+Q7 <- Q6.6
+
+```
+
+
+
+
+## Step 8
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+```{r, echo = TRUE}
+png("plot5.png", width = 480, height = 480)
+
+activityData <- read.csv("activity.csv")
+activityData$steps <- na.aggregate(activityData$steps, activityData$interval)
+
+activityData$date <- as.Date(activityData$date)
+
+activityData <- mutate(activityData, day = weekdays(activityData$date))
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+activityData <- mutate(activityData, day_type = factor((activityData$day %in% weekdays), levels = c(FALSE, TRUE), labels = c("Weekend", "Weekday")))
+
+
+activityData <- activityData %>% group_by(interval, day_type) %>% summarize_at(vars(steps), mean, na.rm = TRUE)
+
+g <- ggplot(activityData, aes(x = interval, y = steps))
+g <- g + facet_grid(day_type ~ .) + geom_line() + ggtitle("Mean steps per interval on Weekdays and Weekends")
+g
+
+dev.off()
+```
